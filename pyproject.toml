@@ -1,0 +1,25 @@
+[tool.poetry]
+name = "owt"
+version = "0.1.0"
+description = "A python client for Intel OWT server"
+authors = ["vipcxj <vipcxj@126.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+aiortc = "^1.5.0"
+aiohttp = "^3.8.5"
+six = "^1.16.0"
+python-socketio = {extras = ["asyncio-client"], version = "^5.8.0"}
+aioquic = "^0.9.21"
+windows-capture-device-list = {version = "^1.1.0", platform = "windows"}
+
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.0"
+pytest-asyncio = "^0.21.1"
+pytest-dependency = "^0.5.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
