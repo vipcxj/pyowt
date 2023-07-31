@@ -256,8 +256,8 @@ class OwtChannel(EventDispatcher):
     async def subscribe(self, stream: RemoteStream, options: SubscribeOptions | None = None) -> Subscription:
         if self._ended:
             raise asyncio.InvalidStateError('Connection closed')
-        has_audio_stream = stream.settings and stream.settings.audio is not None
-        has_video_stream = stream.settings and stream.settings.video is not None
+        has_audio_stream = bool(stream.settings and stream.settings.audio)
+        has_video_stream = bool(stream.settings and stream.settings.video)
         if not options:
             options = SubscribeOptions(audio=has_audio_stream, video=has_video_stream)
         if not options.audio:
