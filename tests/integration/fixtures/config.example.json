@@ -3,6 +3,18 @@
         "url": "https://localhost:3004",
         "user_name": "test",
         "role": "presenter",
-        "room": ""
+        "room": "",
+        "rtc_config": {
+            "iceServers": [
+                {
+                  "username": "XXX",
+                  "credential": "YYYYYY",
+                  "urls": [
+                    "turn:turn-url?transport=udp"
+                  ]
+                }
+              ],
+              "iceTransportPolicy": "all"
+        }
     }
 }

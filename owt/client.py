@@ -29,6 +29,7 @@ if __name__ == '__main__':
 
 from .channel import OwtChannel
 from .quic import QuicChannel
+from .quic_types import QuicConfigurationDict, toQuicConfiguration
 from .common import ConferenceError, EventDispatcher, MessageEvent, OwtEvent
 from .constants import AudioSourceInfo, VideoSourceInfo
 from .info import ConferenceInfo
@@ -79,11 +80,67 @@ class ParticipantEvent(OwtEvent):
     def __init__(self, type: str, participant: Participant) -> None:
         super().__init__(type)
         self.participant = participant
+        
+class IceServerDict(TypedDict):
+    username: NotRequired[str | None]
+    credential: NotRequired[str | None]
+    credentialType: NotRequired[str | None]
+    urls: str | list[str]
+        
+class RTCConfigurationDict(TypedDict):
+    iceServers: NotRequired[list[IceServerDict | RTCIceServer] | None]
+    
+def toRTCConfiguration(value: RTCConfiguration | RTCConfigurationDict) -> RTCConfiguration:
+    if isinstance(value, RTCConfiguration):
+        return value
+    iceservers = value.get('iceServers')
+    if iceservers is None:
+        return RTCConfiguration()
+    else: 
+        return RTCConfiguration(
+            iceServers=[RTCIceServer(
+                urls=cast(Any, ice_server['urls']),
+                username=ice_server.get('username'),
+                credential=ice_server.get('credential'),
+                credentialType=ice_server.get('credentialType', 'password') or 'password',
+            ) if isinstance(ice_server, dict) else ice_server for ice_server in iceservers]
+        )
+    
+class ConferenceClientConfigurationDict(TypedDict):
+    rtcConfiguration: NotRequired[RTCConfiguration | RTCConfigurationDict | None]
+    webTransportConfiguration: NotRequired[QuicConfiguration | QuicConfigurationDict | None]
 
 @dataclass
 class ConferenceClientConfiguration:
-    rtcConfiguration: RTCConfiguration | None = None
-    webTransportConfiguration: QuicConfiguration | None = None
+    rtcConfiguration: RTCConfiguration | RTCConfigurationDict | None = None
+    webTransportConfiguration: QuicConfiguration | QuicConfigurationDict | None = None
+    
+    @property
+    def rtcConfigurationObject(self) -> RTCConfiguration:
+        if self.rtcConfiguration is None:
+            return RTCConfiguration()
+        else:
+            return toRTCConfiguration(self.rtcConfiguration)
+        
+    @property
+    def webTransportConfigurationObject(self) -> QuicConfiguration | None:
+        if isinstance(self.webTransportConfiguration, dict):
+            return toQuicConfiguration(self.webTransportConfiguration)
+        return self.webTransportConfiguration
+    
+    @staticmethod
+    def fromConfigLike(value: "ConferenceClientConfiguration | ConferenceClientConfigurationDict | None"):
+        if value is None:
+            return ConferenceClientConfiguration()
+        if isinstance(value, ConferenceClientConfiguration):
+            return value
+        rtcConfiguration = value.get('rtcConfiguration')
+        if rtcConfiguration:
+            rtcConfiguration = toRTCConfiguration(rtcConfiguration)
+        webTransportConfiguration = value.get('webTransportConfiguration')
+        if webTransportConfiguration:
+            webTransportConfiguration = toQuicConfiguration(webTransportConfiguration)
+        return ConferenceClientConfiguration(rtcConfiguration=rtcConfiguration, webTransportConfiguration=webTransportConfiguration)
 
 class ConferenceClient(EventDispatcher):
     config: ConferenceClientConfiguration
@@ -99,9 +156,9 @@ class ConferenceClient(EventDispatcher):
     quicTransportChannel: QuicChannel | None
     exception_collector: AsyncExceptionCollector | None
     
-    def __init__(self, config: ConferenceClientConfiguration | None = None, loop: asyncio.AbstractEventLoop | None = None) -> None:
+    def __init__(self, config: ConferenceClientConfiguration | ConferenceClientConfigurationDict | None = None, loop: asyncio.AbstractEventLoop | None = None) -> None:
         super().__init__()
-        self.config = config if config is not None else ConferenceClientConfiguration()
+        self.config = ConferenceClientConfiguration.fromConfigLike(config)
         self.me = None
         self.__loop = loop
         self.__ready = asyncio.Event()
@@ -113,8 +170,7 @@ class ConferenceClient(EventDispatcher):
         self.quicTransportChannel = None
         self.exception_collector = None
         self.signaling.addEventListener('data', self.onDataMessage)
-        self.signaling.addEventListener('disconnect', self.onDisconnect)
-        
+        self.signaling.addEventListener('disconnect', self.onDisconnect)        
         
     @property
     def loop(self):
@@ -213,7 +269,7 @@ class ConferenceClient(EventDispatcher):
         return stream
     
     def createPeerConnectionChannel(self) -> OwtChannel:
-        channel = OwtChannel(signaling=self.signaling, rtc_configure=self.config.rtcConfiguration, loop=self.__loop)
+        channel = OwtChannel(signaling=self.signaling, rtc_configure=self.config.rtcConfigurationObject, loop=self.__loop)
         def on_id_msg(evt: MessageEvent):
             if evt.message not in self.channels:
                 self.channels[evt.message] = channel
@@ -276,7 +332,7 @@ class ConferenceClient(EventDispatcher):
                     if not quic_token:
                         logger.warning('Unable to find quic token in login result, but the login token support it.')
                     else:
-                        self.quicTransportChannel = QuicChannel(quic_url, quic_token, self.signaling, configure=self.config.webTransportConfiguration)
+                        self.quicTransportChannel = QuicChannel(quic_url, quic_token, self.signaling, configure=self.config.webTransportConfigurationObject)
                         await self.quicTransportChannel.init()
                 assert self.me is not None
                 conferenceInfo = ConferenceInfo(
@@ -377,7 +433,7 @@ class ConferenceClient(EventDispatcher):
             assert stream
             return stream
         
-    def consume_streams(self, callback: Callable[[RemoteStream], Any], auto_resume: bool = True, timeout: float = 0):
+    def consume_streams(self, callback: Callable[[RemoteStream], Any], auto_resume: bool | int = True, timeout: float = 0):
         loop = self.__loop
         class Tasks:
             tasks: list[asyncio.Future]
@@ -553,6 +609,13 @@ class ConferenceClient(EventDispatcher):
                 
         tasks: Tasks = Tasks(timeout=timeout)
         async def wrap_task(stream: RemoteStream):
+            if isinstance(auto_resume, bool):
+                if auto_resume:
+                    try_times = -1
+                else:
+                    try_times = 0
+            else:
+                try_times = auto_resume
             while True:
                 try:
                     await ensure_future(callback, stream)
@@ -562,8 +625,10 @@ class ConferenceClient(EventDispatcher):
                     if stream.id not in self.remoteStreams:
                         logger.info(f'Stream {stream.id} removed, so stop the binding task.')
                         break
-                    if not auto_resume:
+                    if try_times == 0:
                         raise
+                    elif try_times > 0:
+                        try_times = try_times - 1
                 else:
                     break
                     

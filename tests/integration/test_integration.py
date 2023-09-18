@@ -27,12 +27,13 @@ async def token(config: TestConfig) -> str:
     assert user_name
     role = server.get('role')
     assert role
-    room = server.get('room')
+    room = server.get('room') or ''
     return await create_token_from_owt_demo(url, user_name, role, room=room)
 
 @pytest.fixture
-def client() -> ConferenceClient:
-    return ConferenceClient()
+def client(config: TestConfig) -> ConferenceClient:
+    rtc_config = config['server'].get('rtc_config') or {}
+    return ConferenceClient(config={ "rtcConfiguration": rtc_config })
 
 @pytest.fixture
 async def conference(client: ConferenceClient, token: str):
