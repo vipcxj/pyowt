@@ -434,6 +434,22 @@ class ConferenceClient(EventDispatcher):
             return stream
         
     def consume_streams(self, callback: Callable[[RemoteStream], Any], auto_resume: bool | int = True, timeout: float = 0):
+        """consume the streams
+
+        Args:
+            callback invoked on all existing streams first, then will invoked when the new stream reccived.
+            auto_resume (bool | int, optional): if true, the retry the callback when it raise the exception except for the stream completed. 
+            If provide with a number, the negative number means try any times, zero means not resume, and positive number means the try times.
+            Defaults to True.
+            timeout (float, optional): if the existing streams are all consumed (Here consumed means the callback completed) 
+            and there is no new stream incoming for timeout second, the wait method will return. Defaults to 0. A zero or negative number means wait forever.
+
+        Raises:
+            asyncio.InvalidStateError: This means this method has some bug. it should never raised.
+
+        Returns:
+            Handle: a hande which can be to wait, close and renew (refresh the timeout).
+        """
         loop = self.__loop
         class Tasks:
             tasks: list[asyncio.Future]
@@ -456,9 +472,9 @@ class ConferenceClient(EventDispatcher):
             async def _do_timeout(self):
                 if self.timeout > 0:
                     await asyncio.sleep(self.timeout)
-                with self.lock:
-                    if self.state == 'timeouting':
-                        self.state = 'timeouted'
+                    with self.lock:
+                        if self.state == 'timeouting':
+                            self.state = 'timeouted'
                         
                 
             async def wait(self, close: bool = True) -> None:
@@ -491,8 +507,8 @@ class ConferenceClient(EventDispatcher):
                     elif self.state == 'running':
                         return True
                     elif self.state == 'timeouting' or self.state == 'timeouted':
-                        self.timeout_future = asyncio.ensure_future(self._do_timeout(), loop=loop)
                         self.state = 'timeouting'
+                        self.timeout_future = asyncio.ensure_future(self._do_timeout(), loop=loop)
                         return True
                     else:
                         raise asyncio.InvalidStateError(f'Invalid state: {self.state}')
@@ -510,8 +526,8 @@ class ConferenceClient(EventDispatcher):
                                 assert not self.working_future.done()
                                 self.working_future.set_result(None)
                                 assert self.timeout_future.done()
-                                self.timeout_future = asyncio.ensure_future(self._do_timeout(), loop=loop)
                                 self.state = 'timeouting'
+                                self.timeout_future = asyncio.ensure_future(self._do_timeout(), loop=loop)
                 
             def add_task(self, task: asyncio.Future):
                 if self.state == 'closed' or self.state == 'closing' or self.state == 'error':
