@@ -646,6 +646,7 @@ class ConferenceClient(EventDispatcher):
                         raise
                     elif try_times > 0:
                         try_times = try_times - 1
+                    await asyncio.sleep(1)
                 else:
                     break
                     
