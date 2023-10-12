@@ -84,6 +84,7 @@ class SioSignaling(EventDispatcher):
             }
         async def on_exception(e: BaseException):
             await self.disconnect(True, True, e)
+            
         await collector.add_listener(on_exception)
         
         await io.connect(host)
