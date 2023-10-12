@@ -17,8 +17,9 @@ from .portal_types import (BWEResult, CandidateMessage, LoginInfo, LoginResult,
                            TextSendMessage, UnpublicationRequest,
                            UnsubscriptionRequest)
 from .utils import AsyncExceptionCollector, NullAsyncContext
+from .log import configLogger
 
-logger = logging.getLogger("SioSignaling")
+logger = configLogger(logger=logging.getLogger("owt-signaling"))
 
 class SioSignaling(EventDispatcher):
     

@@ -18,8 +18,9 @@ from .quic_types import QuicBidirectionalStream
 from .common import ConferenceError
 from .publication import Publication, TransportSettings
 from .subscription import Subscription
+from .log import configLogger
 
-logger = logging.getLogger('owt[quic]')
+logger = configLogger(logger=logging.getLogger('owt-quic'))
 
 class QuicToken(TypedDict):
     transportId: str

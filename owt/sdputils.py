@@ -3,8 +3,9 @@ import re
 from typing import Literal
 
 from .publication import AudioEncodingParameters, VideoEncodingParameters
+from .log import configLogger
 
-logger = logging.getLogger('OWT')
+logger = configLogger(logging.getLogger('owt-utils'))
 
 def findLineInRange(sdpLines: list[str], startLine: int, endLine: int, prefix: str, substr: str | None = None) -> int:
     realEndLine = endLine if endLine != -1 else len(sdpLines)

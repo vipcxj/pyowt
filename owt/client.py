@@ -46,8 +46,9 @@ from .stream import (ActiveAudioInputChangeEvent, LayoutChangeEvent,
                      convertToSubscriptionCapabilities)
 from .subscription import SubscribeOptions
 from .utils import (AsyncExceptionCollector, NullAsyncContext, ensure_future)
+from .log import configLogger
 
-logger = logging.getLogger('owt[client]')
+logger = configLogger(logger=logging.getLogger('owt-client'))
 
 class SignalingState(Enum):
     READY = 1

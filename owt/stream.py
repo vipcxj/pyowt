@@ -15,8 +15,9 @@ from .sub_types import (AudioSubscriptionCapabilities,
                         SubscriptionCapabilities,
                         VideoSubscriptionCapabilities)
 from .quic_types import QuicBidirectionalStream
+from .log import configLogger
 
-logger = logging.getLogger('owt[stream]')
+logger = configLogger(logger=logging.getLogger('owt-stream'))
 
 @dataclass
 class StreamSourceInfo:

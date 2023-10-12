@@ -28,10 +28,9 @@ from .subscription import (AudioSubscriptionConstraints, SubscribeOptions,
                            VideoSubscriptionConstraints)
 from .transport import TransportSettings
 from .utils import AsyncExceptionCollector, chain_future, remove_none_value, Postponer
+from .log import configLogger
 
-logger = logging.getLogger("OWT")
-logger.setLevel(logging.DEBUG)
-
+logger = configLogger(logger=logging.getLogger("owt-channel"))
 
 @dataclass
 class TransceiversWithId:
