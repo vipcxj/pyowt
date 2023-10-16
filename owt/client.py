@@ -238,7 +238,6 @@ class ConferenceClient(EventDispatcher):
             
     async def updateRemoteStream(self, stream_info: StreamInfo):
         if stream_info['id'] not in self.remoteStreams:
-            logger.warning(f'Cannot find specific remote stream: {stream_info["id"]}')
             return
         stream = self.remoteStreams[stream_info['id']]
         stream.settings = convertToPublicationSettings(stream_info.get('media'))
