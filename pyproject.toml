@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "owt"
-version = "0.1.3"
+version = "0.1.5"
 description = "A python client for Intel OWT server"
 authors = ["vipcxj <vipcxj@126.com>"]
 readme = "README.md"

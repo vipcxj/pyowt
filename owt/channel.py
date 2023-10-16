@@ -433,7 +433,7 @@ class OwtChannel(EventDispatcher):
         self._internalCount += 1
         return id
         
-    async def _unpublish(self, internalId: int):
+    async def _unpublish(self, internalId: int, error: BaseException | None = None):
         if internalId in self._publishTransceivers:
             transceivers_with_id = self._publishTransceivers[internalId]
             id = transceivers_with_id.id
@@ -455,12 +455,16 @@ class OwtChannel(EventDispatcher):
                 await self._publications[id].dispatchEventAwaitable(event)
                 del self._publications[id]
             else:
-                logger.warning(f'Invalid publication to unpublish: {id}')
                 future = self._publishPromises.get(internalId)
                 if future is not None:
                     if not future.done():
-                        future.set_exception(ConferenceError('Failed to publish'))
+                        if error is not None:
+                            future.set_exception(error)
+                        else:
+                            future.cancel()
                     del self._publishPromises[internalId]
+                else:
+                    logger.warning(f'Invalid publication to unpublish: {id}')
             future = self._sdpResolverMap.get(internalId)
             if future is not None:
                 if not future.done():
@@ -469,7 +473,7 @@ class OwtChannel(EventDispatcher):
                 # not del from _sdpResolvers here
             
         
-    async def _unsubscribe(self, internalId: int):
+    async def _unsubscribe(self, internalId: int, error: BaseException | None = None):
         if internalId in self._subscribeTransceivers:
             transceivers_with_id = self._subscribeTransceivers[internalId]
             id = transceivers_with_id.id
@@ -490,12 +494,16 @@ class OwtChannel(EventDispatcher):
                 await self._subscriptions[id].dispatchEventAwaitable(event)
                 del self._subscriptions[id]
             else:
-                logger.warning(f'Invalid subscription to unsubscribe: {id}')
                 future = self._subscribePromises.get(internalId)
                 if future is not None:
                     if not future.done():
-                        future.set_exception(ConferenceError('Failed to subscribe'))
+                        if error is not None:
+                            future.set_exception(error)
+                        else:
+                            future.cancel()
                     del self._subscribePromises[internalId]
+                else:
+                    logger.warning(f'Invalid subscription to unsubscribe: {id}')
             future = self._sdpResolverMap.get(internalId)
             if future is not None:
                 if not future.done():
@@ -592,9 +600,9 @@ class OwtChannel(EventDispatcher):
             await self._subscriptions[sessionId].dispatchEventAwaitable(errorEvent)
         internalId = self._reverseIdMap.get(sessionId)
         if internalId in self._publishTransceivers:
-            await self._unpublish(internalId)
+            await self._unpublish(internalId, errorEvent.error)
         if internalId in self._subscribeTransceivers:
-            await self._unsubscribe(internalId)
+            await self._unsubscribe(internalId, errorEvent.error)
         
             
     async def _handleError(self, errorMessage: str):
