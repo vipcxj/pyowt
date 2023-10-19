@@ -583,7 +583,11 @@ class OwtChannel(EventDispatcher):
             _sdp = RTCSessionDescription(sdp_sdp, sdp['type'])
             try:
                 logger.debug(sdp_sdp)
-                await self.pc.setRemoteDescription(_sdp)
+                if self.pc.signalingState != 'stable':
+                    await self.pc.setRemoteDescription(_sdp)
+                else:
+                    if self.pc.remoteDescription.sdp != _sdp.sdp:
+                        logger.warning(f'Receive remote sdp after the signaling state became to stable.')
             except Exception as e:
                 logger.error(f'Set remote description failed: {e}')
                 await self._rejectPromise(e)
