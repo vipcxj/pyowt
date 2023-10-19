@@ -702,7 +702,7 @@ class ConferenceClient(EventDispatcher):
         
     async def fireStreamRemoved(self, info: StreamRemoveUpdateMessage):
         if info['id'] not in self.remoteStreams:
-            logger.warning(f'Cannot find specific remote stream {info["id"]}.')
+            # logger.warning(f'Cannot find specific remote stream {info["id"]}.')
             return
         stream = self.remoteStreams[info['id']]
         del self.remoteStreams[info['id']]
@@ -710,7 +710,7 @@ class ConferenceClient(EventDispatcher):
         
     async def fireActiveAudioInputChange(self, info: StreamUpdateUpdateMessage):
         if info['id'] not in self.remoteStreams:
-            logger.warning(f'Cannot find specific remote stream {info["id"]}.')
+            # logger.warning(f'Cannot find specific remote stream {info["id"]}.')
             return
         stream = self.remoteStreams[info['id']]
         assert info['data']['field'] == 'activeInput'
@@ -720,7 +720,7 @@ class ConferenceClient(EventDispatcher):
         
     async def fireLayoutChange(self, info: StreamUpdateUpdateMessage):
         if info['id'] not in self.remoteStreams:
-            logger.warning(f'Cannot find specific remote stream {info["id"]}.')
+            # logger.warning(f'Cannot find specific remote stream {info["id"]}.')
             return
         stream = self.remoteStreams[info['id']]
         event = LayoutChangeEvent('layoutchange', info['data']['value'])

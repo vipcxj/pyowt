@@ -21,6 +21,12 @@ class ConferenceError(Exception):
     def __init__(self, message: str, *args: object) -> None:
         self.message = message
         super().__init__(self.message, *args)
+        
+    def mean_video_stream_not_exist(self):
+        return self.message == "Target video stream does NOT satisfy:Requested video stream"
+    
+    def mean_audio_stream_not_exist(self):
+        return self.message == "Target audio stream does NOT satisfy:Requested audio stream"
 
 class OwtEvent:
     type: str
