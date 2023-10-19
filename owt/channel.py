@@ -103,16 +103,17 @@ class OwtChannel(EventDispatcher):
             async with await Postponer().postpone(self, self.close):
                 if notification == 'progress':
                     progress_message = cast(TransportProgress, message)
-                    if progress_message['status'] == 'soac':
-                        await self._sdpHandler(progress_message['data'])
-                    elif progress_message['status'] == 'ready' and 'sessionId' in progress_message:
-                        # ready消息可能发两次，第一次不带sessionId，只有id，也就是transport id，用以建立连接，第二次才带sessionId
-                        sessionId = progress_message['sessionId']
-                        assert sessionId is not None
-                        self._readyHandler(sessionId)
-                    elif progress_message['status'] == 'error':
-                        # 文档中完美没提到sessionId字段，但js源码里用的是sessionId字段
-                        await self._errorHandler(progress_message.get('sessionId'), progress_message['data'])
+                    if progress_message['id'] == self._id:
+                        if progress_message['status'] == 'soac':
+                            await self._sdpHandler(progress_message['data'])
+                        elif progress_message['status'] == 'ready' and 'sessionId' in progress_message:
+                            # ready消息可能发两次，第一次不带sessionId，只有id，也就是transport id，用以建立连接，第二次才带sessionId
+                            sessionId = progress_message['sessionId']
+                            assert sessionId is not None
+                            self._readyHandler(sessionId)
+                        elif progress_message['status'] == 'error':
+                            # 文档中完美没提到sessionId字段，但js源码里用的是sessionId字段
+                            await self._errorHandler(progress_message.get('sessionId'), progress_message['data'])
                 elif notification == 'stream':
                     stream_message = cast(StreamUpdateMessage, message)
                     await self._onStreamEvent(stream_message)
