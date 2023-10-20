@@ -4,6 +4,8 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Literal, cast, overload
 
 from aiortc import MediaStreamTrack
+import six
+import json
 
 from .common import EventDispatcher, OwtEvent
 from .constants import AudioCodec, AudioSourceInfo, VideoCodec, VideoSourceInfo
@@ -47,6 +49,8 @@ class Stream(EventDispatcher):
     
     def __post_init__(self):
         super().__init__()
+        if isinstance(self.attributes, six.string_types):
+            self.attributes = json.loads(self.attributes)
     
     def hasAudio(self) -> bool:
         for track in self.tracks:
